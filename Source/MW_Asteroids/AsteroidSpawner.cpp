@@ -14,21 +14,33 @@ AAsteroidSpawner::AAsteroidSpawner()
 void AAsteroidSpawner::BeginPlay()
 {
 	Super::BeginPlay();
+	Initialize();
 }
 
 
-int AAsteroidSpawner::FindBestSpawnArea_Implementation()
-{	
-	if (spawnAreas.Num() > 0)
+void AAsteroidSpawner::Initialize()
+{
+	int index = 0; 
+	//Create the array of indices here, so we don't keep recreating it and we can just keep shuffling it later
+	//Make if the developer missed adding a spawn area to the array we don't want to add its index, and throw an error to let them know they missed it.
+	for (ATriggerVolume* triggerVolume : spawnAreas)
 	{
-		TArray<int> indices;
-		TArray<FAsteroidCountStruct> areaResults;
-		
-		for (int index = 0; index < spawnAreas.Num(); index++)
+		if (triggerVolume != nullptr)
 		{
 			indices.Add(index);
 		}
-		indices = RandomizeArray(indices);
+		else
+			UE_LOG(LogTemp, Error, TEXT("ERROR You have not added all the spawn volumes"));
+		index++;
+	}
+}
+
+int AAsteroidSpawner::FindBestSpawnArea_Implementation()
+{	
+	if (indices.Num() > 0)
+	{
+		TArray<FAsteroidCountStruct> areaResults;	
+		RandomizeArray(indices);
 		for (int i : indices)
 		{
 			if (!CheckForPlayer(i))
@@ -38,34 +50,31 @@ int AAsteroidSpawner::FindBestSpawnArea_Implementation()
 					return i;
 			}
 		}
-		FAsteroidCountStruct* bestResult = nullptr;
+		FAsteroidCountStruct* bestResult = &areaResults[0];
 		for (FAsteroidCountStruct currentSpawn : areaResults)
 		{
-			if (bestResult != nullptr)
 				if (bestResult->m_asteroidCount > currentSpawn.m_asteroidCount)
 					bestResult = &currentSpawn;
-			else
-				bestResult = &currentSpawn;
 		}
 		return bestResult->m_index;
 	}
 	return -1;
 }
-///Randomize the array, the next step would be to not copy and instead to do a move.
-TArray<int> AAsteroidSpawner::RandomizeArray(TArray<int> originalArray)
+
+
+///Randomize the array, randomly swap indices aroudn
+void AAsteroidSpawner::RandomizeArray(TArray<int>& originalArray)
 {
-	TArray<int> tempArray = originalArray;
-	TArray<int> randomizedArray;
-	while (tempArray.Num() > 0)
+	int originalArrayLength = originalArray.Num();
+	for (int i = 0; i < originalArrayLength; i++)
 	{
-		int index = FMath::RandRange(0, tempArray.Num() - 1);
-		randomizedArray.Add(tempArray[index]);
-		tempArray.RemoveAt(index);
+		int j = FMath::RandRange(0, originalArray.Num() - 1);
+		originalArray.Swap(i, j);
 	}
-	return randomizedArray;
 }
 
-bool AAsteroidSpawner::CheckForPlayer(int spawnAreaIndex)
+//Check if we have a player in the specified spawn area index.
+bool AAsteroidSpawner::CheckForPlayer(int spawnAreaIndex)   
 {
 	TSet<AActor*> result;
 	spawnAreas[spawnAreaIndex]->GetOverlappingActors(result, APlayerControlledShip::StaticClass());
@@ -73,6 +82,7 @@ bool AAsteroidSpawner::CheckForPlayer(int spawnAreaIndex)
 	return (result.Num() > 0);
 }
 
+//Check how many asteroids are in the trigger volume at the index
 int AAsteroidSpawner::GetAsteroidCount(int spawnAreaIndex)
 {
 	TSet<AActor*> result;
@@ -98,7 +108,6 @@ void AAsteroidSpawner::SpawnAsteroid(TSubclassOf<class AAsteroid> asteroidClass)
 FVector AAsteroidSpawner::GetSpawnPosition(const ATriggerVolume& triggerVolume)
 {
 	FVector spawnLocation = triggerVolume.GetActorLocation();
-	
 	FVector spawnExtents = triggerVolume.GetBounds().BoxExtent;
 	spawnLocation.X += FMath::FRandRange(borderBoundary - spawnExtents.X, spawnExtents.X - borderBoundary);
 	spawnLocation.Y += FMath::FRandRange(borderBoundary - spawnExtents.Y, spawnExtents.Y - borderBoundary);

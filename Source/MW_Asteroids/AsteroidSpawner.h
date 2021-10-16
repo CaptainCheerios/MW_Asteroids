@@ -14,7 +14,7 @@
 #include "AsteroidSpawner.generated.h"
 
 
-USTRUCT()
+USTRUCT()//Struct to keep the count of asteroids and index, we use this for calculating the best spawn location
 struct FAsteroidCountStruct
 {
 	GENERATED_BODY();
@@ -46,7 +46,7 @@ protected:
 	bool CheckForPlayer(int spawnAreaIndex);
 	int GetAsteroidCount(int spawnAreaIndex);
 
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, Category = "AsteroidSpawner")
 	int FindBestSpawnArea();
 	int FindBestSpawnArea_Implementation();
 
@@ -63,9 +63,12 @@ public:
 	UPROPERTY(EditAnywhere, meta=(ClampMin="0.0"))
 	float borderBoundary = 30.0f;
 
+	//Spawn height so that we can keep the asteroids in line with the bullets
 	UPROPERTY(EditAnywhere)
 	float spawnHeight = 30.0f;
 
 private:
-	TArray<int> RandomizeArray(TArray<int> originalArray);
+	TArray<int> indices;
+	void RandomizeArray(TArray<int>& originalArray);
+	void Initialize();
 };
